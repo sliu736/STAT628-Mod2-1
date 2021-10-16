@@ -1,0 +1,72 @@
+---
+title: "method"
+author: "module2"
+date: "10/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r, echo, include=F}
+dat=read.csv("adjust_bodyfat.csv",header=TRUE)
+library(MASS)
+library(tidyverse)
+library(glmnet)
+
+```
+
+## delete the variable density
+
+```{r, echo=FALSE}
+dat_del=dat[,c(-1,-2,-4,-6,-7)]
+head(dat_del)
+```
+
+## stepwise
+
+```{r}
+full.model=lm(BODYFAT~.,data=dat_del)
+step.model=stepAIC(full.model,direction = "both", trace = FALSE)
+summary(step.model)
+```
+
+## ridge
+
+```{r}
+
+x<-dat_del[,-1]%>%as.matrix()
+y<-dat_del[,1]%>%as.matrix()
+fit_ridge <- glmnet(x, y, alpha=0)
+cv.out <- cv.glmnet(x, y, alpha=0)
+best_lamb <- cv.out$lambda.min
+predict(fit_ridge, type='coefficients', s=best_lamb)
+```
+
+
+```{r}
+r_square<-fit_ridge$dev.ratio[which(fit_ridge$lambda==best_lamb)]
+r_square
+```
+
+## lasso
+
+```{r}
+fit_lasso <- glmnet(x, y, family="gaussian", alpha=1)
+plot(fit_lasso, xvar='lambda', label = TRUE)
+cv.out <- cv.glmnet(x, y, alpha=1)
+plot(cv.out)
+best_lamb<-cv.out$lambda.min
+predict(fit_lasso, type='coefficients', s=best_lamb)
+```
+
+```{r}
+r_square<-fit_lasso$dev.ratio[which(fit_lasso$lambda == best_lamb)]
+r_square
+```
+
+我查了下文档，这里面r_square是$R^2=1-\frac{dev}{nulldev}$，看不懂
+
